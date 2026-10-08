@@ -5,6 +5,8 @@ on:
       - master
     tags:
       - '*'
+      # publish-tzdata.yaml builds these tags from a published image
+      - '!*-tzdata*'
 
 env:
   REGISTRY: ghcr.io
