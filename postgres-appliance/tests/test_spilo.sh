@@ -408,6 +408,26 @@ function main() {
     test_spilo "$leader"
 }
 
-trap cleanup QUIT TERM EXIT
+function dump_upgrade_logs() {
+    local c tmp
+    for c in $(docker ps -aq --filter "ancestor=${SPILO_TEST_IMAGE:-spilo}"); do
+        tmp=$(mktemp -d)
+        docker cp "$c:/home/postgres/pgdata/pgroot" - 2>/dev/null \
+            | tar -x -C "$tmp" --wildcards --no-anchored 'pg_upgrade_server.log' 'pg_upgrade_internal.log' 'loadable_libraries.txt' 2>/dev/null
+        find "$tmp" -type f | while read -r f; do
+            echo "===== $(docker inspect -f '{{.Name}}' "$c") ${f#"$tmp"}"
+            tail -n 60 "$f"
+        done
+        rm -rf "$tmp"
+    done
+}
+function on_exit() {
+    local rc=$?
+    if [ "$rc" -ne 0 ]; then
+        dump_upgrade_logs
+    fi
+    cleanup
+}
+trap on_exit QUIT TERM EXIT
 
 main
