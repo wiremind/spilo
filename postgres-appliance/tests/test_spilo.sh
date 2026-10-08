@@ -408,6 +408,12 @@ function main() {
     test_spilo "$leader"
 }
 
-trap cleanup QUIT TERM EXIT
+function dump_upgrade_logs() {
+    for c in $(docker ps -aq --filter name=demo-spilo); do
+        echo "===== $(docker inspect -f '{{.Name}}' "$c")"
+        docker exec "$c" sh -c 'find /home/postgres/pgdata/pgroot -name "pg_upgrade_server.log" -o -name "loadable_libraries.txt" | while read -r f; do echo "--- $f"; tail -n 60 "$f"; done' || true
+    done
+}
+trap 'dump_upgrade_logs; cleanup' QUIT TERM EXIT
 
 main
